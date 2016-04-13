@@ -1,0 +1,225 @@
+#include <iostream>
+#include <stdlib.h>     // abs
+#include <vector>
+#include <fstream>
+#include <stack>        // stack
+
+using namespace std;
+
+int rowlength;
+
+class faerbe {
+public:
+    int startfeld, richtung, farbe;
+    faerbe(int s,int r){
+    startfeld=s;
+    richtung=r;
+    }
+    void tostring(){
+    cout << "s: " << startfeld << "r: " << richtung << endl;
+    }
+};
+
+vector<int> einlesen();
+vector<int> verarbeitung (vector<int> Welt);
+void ausgabe(vector<int>);
+int go( int Richtung, int Feldnum);
+
+
+int main()
+{
+    vector<int> Welt = einlesen();
+    Welt = verarbeitung (Welt);
+    ausgabe(Welt);
+    return 0;
+}
+
+vector<int> verarbeitung(vector<int> Welt) {
+    stack<faerbe> goodstack; //goodstack speichert reihen von feldern von denen aus  ein Ausgang erreichbar ist
+    stack<faerbe> badstack;  //badstack  speichert reihen von feldern von denen aus kein Ausgang erreichbar ist
+    stack<faerbe> cadstack;
+    //PHASE A
+    for (int fieldnum = rowlength+1; fieldnum < Welt.size(); fieldnum++) { //Gehe jedes Feld durch
+        if(Welt[fieldnum] == 1 )                                      // Fuer jedes Startfeld
+            for (int direction = 0; direction < 4; direction++)      // Fuer jede Richtung vom startfeld aus
+                goodstack.push(faerbe(fieldnum, direction));           // speichere sie zur verarbeitung
+    }
+    //Phase B
+    while(!goodstack.empty())
+    {
+        faerbe current = goodstack.top();// Speicher das oberste element des stacks zur bearbeitungcurrent.startfeld
+        goodstack.pop();             // und entferne es aus der schlange
+        current.startfeld = go(current.richtung, current.startfeld);
+        if (Welt[current.startfeld] == 5 || (Welt[current.startfeld]== 3 && current.richtung%2==1) || (Welt[current.startfeld]==4 && current.richtung%2==0)) { ;continue;}
+        while(Welt[current.startfeld] > 1 ){
+            if(current.richtung%2== 0){// nord/s�d gucken
+                if (Welt[current.startfeld==3])
+                     Welt[current.startfeld] = 5;
+                else Welt[current.startfeld] = 4;
+            }
+
+            if(current.richtung%2==1){
+                if (Welt[current.startfeld==4])
+                     Welt[current.startfeld] = 5;
+                else Welt[current.startfeld] = 3;
+            }
+
+            int links, rechts;
+            switch (current.richtung) {
+                case 0: links = current.startfeld-1; rechts = current.startfeld+1; break;
+                case 1: links = current.startfeld-rowlength; rechts = current.startfeld+rowlength;break;
+                case 2: links = current.startfeld+1; rechts = current.startfeld-1;break;
+                case 3: links = current.startfeld+rowlength; rechts = current.startfeld-rowlength;break;
+            }
+            if (Welt[links] > 1 && Welt[rechts] == 0)
+                goodstack.push(faerbe(current.startfeld,(current.richtung+3)%4));
+            if (Welt[links] == 0 && Welt[rechts] > 1)
+                goodstack.push(faerbe(current.startfeld,(current.richtung+1)%4));
+            if (Welt[rechts] == 2 )
+                badstack.push(faerbe(rechts,(current.richtung+3)%4));
+            if (Welt[links] == 2 )
+                badstack.push(faerbe(links, (current.richtung+1)%4));
+
+            current.startfeld = go(current.richtung, current.startfeld); // gehe zum n�chsten Feld in der reihe
+        }
+    }
+
+    //PHASE C
+    //if(false)
+    while(!badstack.empty())
+    {
+        faerbe current = badstack.top();// Speicher das letzte element der Schlange zur bearbeitung
+        badstack.pop();             // und entferne es aus der schlange
+        if (Welt[current.startfeld] != 2 ) continue;
+        current.startfeld = go(current.richtung, current.startfeld); // gehe zum n�chsten Feld in der reihe
+        //if (Welt[current.startfeld] == 8 || (Welt[current.startfeld]== 6 && current.richtung%2==1) || (Welt[current.startfeld]==7 && current.richtung%2==0)) {continue;}
+
+        while( Welt[current.startfeld] > 2) {
+                if(current.richtung %2 == 0){// nord/s�d gucken
+                    if (Welt[current.startfeld ==  6])
+                         Welt[current.startfeld] = 8;
+                    else Welt[current.startfeld] = 7;
+                }
+
+                if(current.richtung %2 == 1){
+                    if (Welt[current.startfeld ==  7])
+                         Welt[current.startfeld] = 8;
+                    else Welt[current.startfeld] = 6;
+                }
+
+
+            int links, rechts;
+            switch (current.richtung) { // Links und rechts (abhaengig von der aktuellen Richtung) bestimmen
+                case 0: links = current.startfeld-1; rechts = current.startfeld+1; break;
+                case 1: links = current.startfeld-rowlength; rechts = current.startfeld+rowlength;break;
+                case 2: links = current.startfeld+1; rechts = current.startfeld-1;break;
+                case 3: links = current.startfeld+rowlength; rechts = current.startfeld-rowlength;break;
+            }
+            if (Welt[links] == 0)
+                cadstack.push(faerbe(current.startfeld,(current.richtung+1)%4));
+            if (Welt[rechts] == 0)
+                cadstack.push(faerbe(current.startfeld,(current.richtung+3)%4));
+            current.startfeld = go(current.richtung, current.startfeld); // gehe zum n�chsten Feld in der reihe
+        }
+    }
+
+    while(!cadstack.empty())
+        {
+            faerbe current = cadstack.top();// Speicher das letzte element der Schlange zur bearbeitung
+            cadstack.pop();             // und entferne es aus der schlange
+            if(Welt[current.startfeld] != 6 && Welt[current.startfeld] != 7 && Welt[current.startfeld] != 8) continue;
+            current.startfeld = go(current.richtung, current.startfeld); // gehe zum n�chsten Feld in der reihe
+
+            if (Welt[current.startfeld] == 8 || (Welt[current.startfeld]== 6 && current.richtung%2==1) || (Welt[current.startfeld]==7 && current.richtung%2==0)) {continue;}
+            while(Welt[current.startfeld] > 2){
+                if(current.richtung %2 == 0){// nord/s�d gucken
+                    if (Welt[current.startfeld ==  6])
+                         Welt[current.startfeld] = 8;
+                    else Welt[current.startfeld] = 7;
+                }
+
+                if(current.richtung %2 == 1){
+                    if (Welt[current.startfeld ==  7])
+                         Welt[current.startfeld] = 8;
+                    else Welt[current.startfeld] = 6;
+                }
+                //cout <<cadstack.size()<<endl;
+                int links, rechts;
+                switch (current.richtung) { // Links und rechts (abhaengig von der aktuellen Richtung) bestimmen
+                    case 0: links = current.startfeld-1; rechts = current.startfeld+1; break;
+                    case 1: links = current.startfeld-rowlength; rechts = current.startfeld+rowlength;break;
+                    case 2: links = current.startfeld+1; rechts = current.startfeld-1;break;
+                    case 3: links = current.startfeld+rowlength; rechts = current.startfeld-rowlength;break;
+                }
+                if (Welt[links] == 0)
+                    cadstack.push(faerbe(current.startfeld,(current.richtung+1)%4));
+                if (Welt[rechts] == 0)
+                    cadstack.push(faerbe(current.startfeld,(current.richtung+3)%4));
+                current.startfeld = go(current.richtung, current.startfeld); // gehe zum n�chsten Feld in der reihe
+            }
+        }
+
+    return Welt;
+}
+
+int go(int Richtung, int Feldnum) {
+    switch (Richtung){
+        case 0: Feldnum -= rowlength; break;
+        case 1: Feldnum += 1;         break;
+        case 2: Feldnum += rowlength; break;
+        case 3: Feldnum -= 1;         break;
+    }
+    return Feldnum;
+}
+
+vector<int> einlesen(){
+    int length, linenum = 0, i = 0;
+    char c;
+    ifstream Quelle; //Eingabestream
+    Quelle.open("C:\\Users\\Leunam\\Desktop\\it\\bwinf\\yamyams5.txt", ios::in); //Hier den Pfad mit der datei mit der Welt einf�gen.
+    if(!Quelle) {
+        cerr << "Datei wurde nicht gefunden." << endl;
+        exit(-1);
+    }
+    Quelle.seekg (0, Quelle.end);
+    length = Quelle.tellg();
+    Quelle.seekg (0, Quelle.beg);
+    vector<int> Welt(length); //erstellen eines vectors welcher die Welt repr�sentiert
+    while(Quelle.get(c)) // einlesen der Welt in den Vector, # -> 0, ' ' -> 1, K -> 2
+    {
+        switch (c)
+        {
+        case '#':            Welt[i++] = 0;break;
+        case 'E':            Welt[i++] = 1;break;
+        case ' ':            Welt[i++] = 2;break;
+        case '\n':           linenum++;break;
+        }
+    }
+    Quelle.close();
+    length -= linenum * 2; // \n (Zeilenende) z�hlt als 2 zeichen
+    rowlength = length / linenum;
+    Welt.resize(length);
+    return Welt;
+}
+
+void ausgabe(vector<int> Welt ) {
+    for (int i = 0; i < Welt.size(); i++) {
+        if (i % rowlength == 0 && i != 0)
+            cout << endl;
+        switch (Welt[i])
+        {
+            case 0: cout << "#";break;//Wand
+            case 1: cout << "E";break;//Exit
+            case 2: cout << "-";break;//gefangen
+            case 3: cout << "+";break;//sicher bearbeitet in x
+            case 4: cout << "+";break;//sicher bearbeitet in y
+            case 5: cout << "+";break;//sicher bearbeitet    ges
+            case 6: cout << "*";break;//z.T sicher bearbeitet in x
+            case 7: cout << "*";break;//z.T sicher bearbeitet in y
+            case 8: cout << "*";break;//z.T sicher bearbeitet    ges
+
+
+        }
+    }
+    cout << endl;
+}
